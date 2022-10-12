@@ -3,13 +3,11 @@ import telebot
 import requests
 from telebot import types
 
-bot = telebot.TeleBot("5229616901:AAGceI2oC1rBccvl3n5IDXCdmFc0WmKUt7E")
-api_key_news='ba38c33f96374bedb36220b6ff9af4fa'
+bot = telebot.TeleBot("Вставьте свой токен")
+api_key_news='Вставьте свой токен'
 
 conn = sqlite3.connect('database.db', check_same_thread=False)
 cursor = conn.cursor()
-
-
 
 def convertList(news):
     str = ''
@@ -30,7 +28,6 @@ def send_welcome(message):
     else:
         bot.send_message(message.from_user.id, "Добро пожаловать")
     finally:
-        # conn.close()
         print('fdds')
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -48,21 +45,17 @@ def func(message):
     login = message.from_user.id
     if (message.text == "👋 Поздороваться"):
         bot.send_message(message.chat.id, text="Приветик! Спасибо, что пользуешься этим ботом!)")
-
     elif (message.text == "🔎 Категории"):
         markup = types.InlineKeyboardMarkup()
-        # categories = cursor.execute('SELECT id, name FROM categories').fetchall()
         user = conn.execute('''SELECT users.id FROM users WHERE login=?''', (login,)).fetchone()[0]
         sublist = conn.execute('''select categories.id, categories.name from categories
         INNER JOIN subscribes ON categories.id == subscribes.id_category
         INNER JOIN users ON users.id == subscribes.id_user
         where users.id=?
         ''', (user,)).fetchall()
-        # sublist = [*(x for t in sublist for x in t)]
         print(sublist)
         for category in sublist:
             markup.add(types.InlineKeyboardButton(category[1], callback_data=f'category-{category[0]}'))
-
         bot.send_message(message.chat.id, "Выберите категорию:", reply_markup=markup)
 
     elif (message.text == "✉ Подписки"):
@@ -90,7 +83,6 @@ def func(message):
         INNER JOIN users ON users.id == subscribes.id_user
         where users.id=?
         ''', (user,)).fetchall()
-        # sublist = [*(x for t in sublist for x in t)]
         print(sublist, type(sublist))
         for category in sublist:
             unsub.add(types.InlineKeyboardButton(category[1], callback_data=f'unsub-{category[0]}'))
@@ -99,13 +91,10 @@ def func(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def category(call):
-    print(call.data)
     command = call.data.split('-')[0]
     data = call.data.split('-')[1]
-    print(data, type(data))
     cat = conn.execute("SELECT name FROM categories WHERE id = ?", (data,)).fetchone()[0]
     user = call.from_user.id
-    print(cat, type(cat))
     if(command == 'category'):
         news = []
         a = requests.get(f'https://newsapi.org/v2/top-headlines?apiKey={api_key_news}&category={cat}&pageSize=3&country=ru')
@@ -117,9 +106,7 @@ def category(call):
         bot.send_message(call.message.chat.id, answer)
 
     elif (command == 'unsub'):
-        print(cat, data)
         proverka = cursor.execute('SELECT login FROM users').fetchall()
-        print(proverka)
         users = []
         for item in proverka:
             users.append(item[0])
@@ -148,7 +135,6 @@ def category(call):
 
     elif(command == 'sub'):
         proverka = cursor.execute('SELECT login FROM users').fetchall()
-        print(proverka)
         users = []
         for item in proverka:
             users.append(item[0])
@@ -179,59 +165,30 @@ def category(call):
 
     bot.answer_callback_query(call.id)
 
+try:
+    connect = sqlite3.connect('database.db')
+    cursor = connect.cursor()
+    cursor.execute ("""CREATE TABLE IF NOT EXISTS "users" (
+	"id"	INTEGER NOT NULL,
+	"login"	TEXT NOT NULL UNIQUE,
+	PRIMARY KEY("id" AUTOINCREMENT)
+    );""")
 
-# @bot.message_handler(commands=['help'])
-# def send_help(message):
-# 	bot.reply_to(message, "/news - новости")
-# @bot.message_handler(commands=['news'])
-# def send_news(message):
-#     category = 'health'
-#     a = requests.get(f'https://newsapi.org/v2/top-headlines?apiKey={api_key_news}&category={category}&pageSize=3')
-#     for i in a.json()['articles']:
-#         news.append([i['title'], i['publishedAt'], i['url']])
-#     answer=""
-#     for line in news:
-#         answer+=convertList(line)+"~~~~~~~~~~~~~~~~~~~~~~\n"
-#     bot.send_message(message.chat.id, answer)
-# @bot.message_handler(commands=['reg'])
-# def reg(message):
-#     login = message.from_user.id
-#     try:
-#         conn = sqlite3.connect('database.db', check_same_thread=False)
-#         cursor = conn.cursor()
-#
-#         cursor.execute('INSERT INTO users(login) VALUES(?)',(login,))
-#         conn.commit()
-#     except (sqlite3.Error):
-#         bot.reply_to(message, "error")
-#     else:
-#         bot.reply_to(message, "Добавлен(а) в базу")
-#     finally:
-#         conn.close()
-# try:
-#     connect = sqlite3.connect('database.db')
-#     cursor = connect.cursor()
-#     cursor.execute ("""CREATE TABLE IF NOT EXISTS "users" (
-# 	"id"	INTEGER NOT NULL,
-# 	"login"	TEXT NOT NULL UNIQUE,
-# 	PRIMARY KEY("id" AUTOINCREMENT)
-#     );""")
-#
-#     cursor.execute ("""CREATE TABLE IF NOT EXISTS "categories" (
-# 	"id"	INTEGER NOT NULL,
-# 	"name"	TEXT NOT NULL,
-# 	PRIMARY KEY("id" AUTOINCREMENT)
-#     );""")
-#
-#     cursor.execute ("""CREATE TABLE IF NOT EXISTS "subscribes" (
-# 	"id_user"	INTEGER NOT NULL,
-# 	"id_category"	INTEGER NOT NULL
-#     );""")
-#     connect.commit()
-# except sqlite3.Error as error:
-#     print('Ошибка', error)
-# finally:
-#     # cursor.close()
-#     print('fdgd')
+    cursor.execute ("""CREATE TABLE IF NOT EXISTS "categories" (
+	"id"	INTEGER NOT NULL,
+	"name"	TEXT NOT NULL,
+	PRIMARY KEY("id" AUTOINCREMENT)
+    );""")
+
+    cursor.execute ("""CREATE TABLE IF NOT EXISTS "subscribes" (
+	"id_user"	INTEGER NOT NULL,
+	"id_category"	INTEGER NOT NULL
+    );""")
+    connect.commit()
+except sqlite3.Error as error:
+    print('Ошибка', error)
+finally:
+    # cursor.close()
+    print('fdgd')
 
 bot.infinity_polling()
